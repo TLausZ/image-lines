@@ -83,3 +83,37 @@ test('buildSvg: pixel and paper variants', () => {
   assert.match(a4, /translate\(10.000 35.750\) scale\(2.770000\)/);
   assert.match(a4, /stroke-width="0.1083"/);            // 0.3 mm / 2.77
 });
+
+test('circle lines: count, closure, radius, ellipse stretch', () => {
+  const P = p({ min_radius: 2, max_radius: 10, lines_spacing: 2, precision: 0.5, center_x: 3, center_y: -1, ellipse: 0 });
+  const lines = L.buildCircleLines(P);
+  assert.equal(lines.length, 4);                                   // r = 2, 4, 6, 8
+  for (const [k, pts] of lines.entries()) {
+    assert.equal(pts[0], pts[pts.length - 2]); assert.equal(pts[1], pts[pts.length - 1]);   // closed
+    const r = 2 + 2 * k;
+    for (let i = 0; i < pts.length; i += 2)
+      assert.ok(Math.abs(Math.hypot(pts[i] - 3, pts[i + 1] + 1) - r) < 1e-9);
+  }
+  const wide = L.buildCircleLines({ ...P, ellipse: 1 })[0];        // strech 2: rx = 4, ry = 1
+  assert.ok(Math.abs(wide[0] - 3 - 4) < 1e-9);
+  const tall = L.buildCircleLines({ ...P, ellipse: -1 })[0];       // strech 0.5: rx = 1
+  assert.ok(Math.abs(tall[0] - 3 - 1) < 1e-9);
+});
+
+test('sinus lines: amplitude, period and direction', () => {
+  const P = p({ direction: 0, size: 100, lines_spacing: 50, precision: 1, high: 10, period: 100 });
+  const lines = L.buildSinusLines(P);
+  assert.equal(lines.length, 5);                                   // advance -100..100 step 50
+  const mid = lines[2];                                            // advance 0, y = 10 sin(2 pi x / 100)
+  const at = x => mid[(x + 100) * 2 + 1];
+  assert.ok(Math.abs(at(0)) < 1e-9);
+  assert.ok(Math.abs(at(25) - 10) < 1e-9);
+  assert.ok(Math.abs(at(75) + 10) < 1e-9);
+  const ys = mid.filter((_, i) => i % 2);
+  assert.ok(Math.max(...ys) <= 10 + 1e-9 && Math.min(...ys) >= -10 - 1e-9);
+  // direction 90: x and y swap roles
+  const rot = L.buildSinusLines({ ...P, direction: 90 })[2];
+  assert.ok(Math.abs(rot[(25 + 100) * 2] + 10) < 1e-9);
+  assert.equal(L.buildLines({ ...P, type: 2 }).length, 5);
+  assert.equal(L.buildLines({ ...P, type: 0 }).length, 5);
+});

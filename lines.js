@@ -32,6 +32,47 @@ function buildStraightLines(P) {
   return lines;
 }
 
+// CircleLines.buildLines: concentric circles or ellipses around (center_x, center_y)
+function buildCircleLines(P) {
+  const prec = Math.max(0.5, P.precision);
+  const strech = P.ellipse >= 0 ? 1 + P.ellipse : 1 / (1 - P.ellipse);
+  const lines = [];
+  for (let r = P.min_radius; r < P.max_radius; r += P.lines_spacing) {
+    const rx = r * strech, ry = r / strech;
+    const nb = Math.ceil(2 * Math.PI * (rx + ry) / 2 / prec);
+    const delta = 2 * Math.PI / nb;
+    const pts = [];
+    for (let a = 0; a < 2 * Math.PI; a += delta)
+      pts.push(P.center_x + rx * Math.cos(a), P.center_y + ry * Math.sin(a));
+    pts.push(pts[0], pts[1]);                     // close the circle
+    if (pts.length >= 4) lines.push(pts);
+  }
+  return lines;
+}
+
+// SinusLines.buildLines: parallel sine waves, amplitude high, wavelength period
+function buildSinusLines(P) {
+  const rad = P.direction * Math.PI / 180;
+  const fx = Math.cos(rad), fy = Math.sin(rad);
+  const rx = -fy, ry = fx;
+  const radius = P.size, prec = Math.max(0.5, P.precision);
+  const lines = [];
+  for (let advance = -radius; advance <= radius; advance += P.lines_spacing) {
+    const pts = [];
+    for (let x = -radius; x <= radius; x += prec) {
+      const y = P.high * Math.sin(2 * Math.PI * x / P.period) + advance;
+      pts.push(fx * x + rx * y, fy * x + ry * y);
+    }
+    if (pts.length >= 4) lines.push(pts);
+  }
+  return lines;
+}
+
+// MultiLinesGenerator.buildLines: type 0 straight, 1 circles, 2 sinus
+function buildLines(P) {
+  return [buildStraightLines, buildCircleLines, buildSinusLines][P.type || 0](P);
+}
+
 // DataThreshold (xLib_ThresholdData.pde)
 function thresholdByIndex(P, index) {
   const n = P.nb_values;
@@ -149,6 +190,6 @@ ${paths}
 </svg>`;
 }
 
-root.ImageLines = { getPixelValue, buildStraightLines, thresholdByIndex, distributedIndex,
+root.ImageLines = { getPixelValue, buildStraightLines, buildCircleLines, buildSinusLines, buildLines, thresholdByIndex, distributedIndex,
   interleavedTable, bisectBfsTable, applyThreshold, buildSvg };
 })(typeof module !== 'undefined' ? module.exports : globalThis);

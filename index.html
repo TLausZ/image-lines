@@ -127,6 +127,8 @@
   }
   .btnrow { display: flex; gap: 8px; align-items: center; }
   #panel > button, #exportPanel > button { flex: none; }
+  #modeStraight, #modeCircle, #modeSinus, #ctrlSinusDir { display: flex; flex-direction: column; gap: 12px; }
+  #modeStraight[hidden], #modeCircle[hidden], #modeSinus[hidden] { display: none; }
   button {
     font-family: inherit;
     font-size: 12px;
@@ -207,13 +209,35 @@
 
     <hr>
     <div class="hint">lines</div>
-    <div class="btnrow" id="dirButtons">
-      <button data-dir="0">&#8212;</button>
-      <button data-dir="-45">///</button>
-      <button data-dir="90">|||</button>
-      <button data-dir="45">\\\</button>
+    <div class="ctrl">
+      <label><span>curve type<span class="help" data-title="curve type" data-help="straight: parallel lines, circles: concentric around a centre, sinus: parallel sine waves">?</span></span></label>
+      <select id="typeSel">
+        <option value="0">lines</option>
+        <option value="1">circles</option>
+        <option value="2">sinus</option>
+      </select>
     </div>
     <div id="ctrlLines"></div>
+    <div id="modeStraight">
+      <div class="btnrow" id="dirButtons">
+        <button data-dir="0">&#8212;</button>
+        <button data-dir="-45">///</button>
+        <button data-dir="90">|||</button>
+        <button data-dir="45">\\\</button>
+      </div>
+      <div id="ctrlStraight"></div>
+    </div>
+    <div id="modeCircle" hidden>
+      <div id="ctrlCircle"></div>
+      <div class="btnrow">
+        <button id="btnCenter">center</button>
+        <button id="btnCircle">circle</button>
+      </div>
+    </div>
+    <div id="modeSinus" hidden>
+      <div id="ctrlSinusDir"></div>
+      <div id="ctrlSinus"></div>
+    </div>
 
     <hr>
     <div class="hint">threshold</div>
@@ -292,7 +316,9 @@ const $ = id => document.getElementById(id);
 const P = {
   Width: 500, Blur: 2,                              // DataImage
   // start values from Settings/default.json of the original
-  lines_spacing: 1.13, precision: 3.6, direction: -44.4, size: 1144,   // DataLines, StraightLinesData
+  type: 0, lines_spacing: 1.13, precision: 3.6, direction: -44.4, size: 1144,   // DataLines, StraightLinesData, shared with sinus
+  min_radius: 0, max_radius: 1000, center_x: 0, center_y: 0, ellipse: 0,          // CircleLinesData
+  high: 20, period: 100,                                                            // SinusLinesData
   lineWidth: 1,   // Style.lineWidth, 0.3 mm per unit on paper
   black: true, distribution_mode: 1, nb_values: 6, power: -0.13, min_value: 0, max_value: 229.5, // DataThreshold
 };
@@ -303,17 +329,30 @@ const SLIDERS = {
     { key: 'Blur', help: 'blur radius before sampling, smooths noise',   label: 'blur',   min: 0,   max: 20,   step: 1 },
   ],
   ctrlLines: [
-    { key: 'direction', help: 'line angle in degrees, buttons: 0, -45, 90, 45',     label: 'direction',     min: -90, max: 90,   step: 0.1 },
-    { key: 'size', help: 'half-length of the lines around the centre, must cover the image corners',          label: 'size',          min: 10,  max: 2000, step: 1 },
-    { key: 'lines_spacing', help: 'distance between adjacent lines in px', label: 'lines spacing', min: 0.5, max: 10,   step: 0.01 },
-    { key: 'precision', help: 'sampling step along each line, lower: smoother, slower',     label: 'precision',     min: 0.5, max: 10,   step: 0.1 },
+    { key: 'lines_spacing', help: 'distance between adjacent lines in px', label: 'lines spacing', min: 0.5, max: 10, step: 0.01 },
+    { key: 'precision', help: 'sampling step along each line, lower: smoother, slower, circles need 0.5 to 1', label: 'precision', min: 0.5, max: 10, step: 0.1 },
+  ],
+  ctrlStraight: [
+    { key: 'direction', help: 'line angle in degrees, buttons: 0, -45, 90, 45', label: 'direction', min: -90, max: 90, step: 0.1 },
+    { key: 'size', help: 'half-length of the lines around the centre, must cover the image corners', label: 'size', min: 10, max: 2000, step: 1 },
+  ],
+  ctrlCircle: [
+    { key: 'min_radius', help: 'radius of the innermost circle', label: 'min radius', min: 0, max: 3000, step: 1 },
+    { key: 'max_radius', help: 'radius of the outermost circle', label: 'max radius', min: 0, max: 3000, step: 1 },
+    { key: 'center_x', help: 'centre offset from the image centre in px', label: 'center x', min: -2000, max: 2000, step: 1 },
+    { key: 'center_y', help: 'centre offset from the image centre in px', label: 'center y', min: -2000, max: 2000, step: 1 },
+    { key: 'ellipse', help: 'ellipse ratio, 0: circle, positive: wide, negative: tall', label: 'ellipse', min: -3, max: 3, step: 0.01 },
+  ],
+  ctrlSinus: [
+    { key: 'high', help: 'wave amplitude in px, keep small relative to spacing', label: 'amplitude', min: 0, max: 100, step: 0.5 },
+    { key: 'period', help: 'wavelength in px', label: 'period', min: 1, max: 400, step: 0.5 },
   ],
   ctrlExport: [
     { key: 'lineWidth', help: 'stroke width in the svg, 0.3 mm per unit on paper', label: 'line width', min: 0.25, max: 3, step: 0.25 },
   ],
   ctrlThreshold: [
     { key: 'nb_values', help: 'number of threshold levels, above 1: halftone-like bands', label: 'nb values', min: 1,   max: 12,  step: 1 },
-    { key: 'power', help: 'threshold curve, 0 linear, above 0 towards bright, below 0 towards dark',     label: 'power',     min: -10, max: 10,  step: 0.01 },
+    { key: 'power', help: 'threshold curve, 0 linear, above 0 packs thresholds into the dark end (fewer lines), below 0 into the bright end (more lines)',     label: 'power',     min: -10, max: 10,  step: 0.01 },
     { key: 'min_value', help: 'lower tonal clamp before thresholding', label: 'min',       min: 0,   max: 255, step: 0.1 },
     { key: 'max_value', help: 'upper tonal clamp before thresholding', label: 'max',       min: 0,   max: 255, step: 0.1 },
   ],
@@ -354,6 +393,17 @@ const setParam = (k, v) => { P[k] = v; inputs[k].input.value = v; inputs[k].show
 
 for (const b of $('dirButtons').querySelectorAll('button'))
   b.addEventListener('click', () => setParam('direction', +b.dataset.dir));
+$('typeSel').addEventListener('change', () => {
+  P.type = +$('typeSel').value;
+  $('modeStraight').hidden = P.type !== 0;
+  $('modeCircle').hidden = P.type !== 1;
+  $('modeSinus').hidden = P.type !== 2;
+  // direction and size are shared by straight and sinus: move their controls into the visible group
+  (P.type === 2 ? $('ctrlSinusDir') : $('modeStraight')).prepend($('dirButtons'), $('ctrlStraight'));
+  schedule();
+});
+$('btnCenter').addEventListener('click', () => { setParam('center_x', 0); setParam('center_y', 0); });
+$('btnCircle').addEventListener('click', () => setParam('ellipse', 0));
 $('btnBlack').addEventListener('click', () => {
   P.black = !P.black; $('btnBlack').classList.toggle('active', P.black); schedule();
 });
@@ -390,7 +440,7 @@ function rebuild() {
   if (!source) return;
   const t0 = performance.now();
   buildTransformedImage();
-  const lines = L.buildStraightLines(P);
+  const lines = L.buildLines(P);
   drawn = L.applyThreshold(P, lines, img);
   view.width = img.w; view.height = img.h;
   const ctx = view.getContext('2d');

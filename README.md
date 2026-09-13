@@ -29,8 +29,8 @@ Work in progress, ported step by step from the original sketch.
 - [x] Threshold filter (black/bright, nb values, power, min/max, all six
       distribution modes: progressive, mirror, hachures, interleaved, bisect,
       bisect bfs)
-- [ ] Circle lines
-- [ ] Sinus lines
+- [x] Circle lines (min/max radius, centre, ellipse)
+- [x] Sinus lines (amplitude, period; direction and size shared with straight lines)
 - [ ] Image levels (min, max, gamma)
 - [x] Export panel: SVG (pixels or paper size with 10 mm margin), PNG/WebP raster
 - [ ] Settings presets
@@ -47,14 +47,19 @@ documents them in detail.
 |-----------|------|
 | `width` | Working width of the image in px; the drawing has the same size |
 | `blur` | Blur radius applied before sampling |
-| `direction` | Angle of the lines in degrees |
-| `size` | Half-length of the lines around the image centre |
+| `curve type` | lines, circles or sinus |
+| `direction` | Angle of the lines in degrees (lines and sinus) |
+| `size` | Half-length of the lines around the image centre (lines and sinus) |
+| `min radius` / `max radius` | Innermost and outermost circle |
+| `center x` / `center y` | Circle centre offset from the image centre |
+| `ellipse` | 0 circle, positive wide, negative tall |
+| `amplitude` / `period` | Sine wave height and wavelength |
 | `lines spacing` | Distance between adjacent lines |
 | `precision` | Step size along each line when sampling pixels |
 | `black lines` | On: draw segments in dark areas; off: in bright areas |
 | `distribution` | Threshold order across adjacent lines |
 | `nb values` | Number of threshold levels |
-| `power` | Curve exponent: 0 linear, > 0 towards bright, < 0 towards dark |
+| `power` | Curve exponent: 0 linear, > 0 packs thresholds into the dark end, < 0 into the bright end |
 | `min` / `max` | Tonal range clamp before threshold evaluation |
 
 ## License and credits
