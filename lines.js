@@ -16,6 +16,21 @@ function getPixelValue(img, x, y) {
   return (img.data[i] + img.data[i + 1] + img.data[i + 2]) / 3;
 }
 
+// DataImage.applyLevels: input range clamp and gamma, in place on RGBA data
+function applyLevels(P, data) {
+  const inMin = Math.min(254, Math.max(0, P.levelsMin));
+  const inMax = Math.min(255, Math.max(inMin + 1, P.levelsMax));
+  const range = inMax - inMin, gammaInv = 1 / Math.pow(5, P.levelsGamma);
+  if (inMin === 0 && inMax === 255 && gammaInv === 1) return data;
+  const lut = new Uint8ClampedArray(256);
+  for (let v = 0; v < 256; v++)
+    lut[v] = Math.pow(Math.min(1, Math.max(0, (v - inMin) / range)), gammaInv) * 255;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = lut[data[i]]; data[i + 1] = lut[data[i + 1]]; data[i + 2] = lut[data[i + 2]];
+  }
+  return data;
+}
+
 // StraightLines.buildLines
 function buildStraightLines(P) {
   const rad = P.direction * Math.PI / 180;
@@ -190,6 +205,6 @@ ${paths}
 </svg>`;
 }
 
-root.ImageLines = { getPixelValue, buildStraightLines, buildCircleLines, buildSinusLines, buildLines, thresholdByIndex, distributedIndex,
+root.ImageLines = { getPixelValue, applyLevels, buildStraightLines, buildCircleLines, buildSinusLines, buildLines, thresholdByIndex, distributedIndex,
   interleavedTable, bisectBfsTable, applyThreshold, buildSvg };
 })(typeof module !== 'undefined' ? module.exports : globalThis);

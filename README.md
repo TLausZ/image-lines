@@ -31,7 +31,7 @@ Work in progress, ported step by step from the original sketch.
       bisect bfs)
 - [x] Circle lines (min/max radius, centre, ellipse)
 - [x] Sinus lines (amplitude, period; direction and size shared with straight lines)
-- [ ] Image levels (min, max, gamma)
+- [x] Image levels (min, max, gamma)
 - [x] Export panel: SVG (pixels or paper size with 10 mm margin), PNG/WebP raster
 - [ ] Settings presets
 
@@ -47,6 +47,7 @@ documents them in detail.
 |-----------|------|
 | `width` | Working width of the image in px; the drawing has the same size |
 | `blur` | Blur radius applied before sampling |
+| `levels min` / `levels max` / `levels gamma` | Input range clamp and gamma before sampling |
 | `curve type` | lines, circles or sinus |
 | `direction` | Angle of the lines in degrees (lines and sinus) |
 | `size` | Half-length of the lines around the image centre (lines and sinus) |

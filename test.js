@@ -117,3 +117,17 @@ test('sinus lines: amplitude, period and direction', () => {
   assert.equal(L.buildLines({ ...P, type: 2 }).length, 5);
   assert.equal(L.buildLines({ ...P, type: 0 }).length, 5);
 });
+
+test('levels: clamp range and gamma', () => {
+  const px = (...v) => new Uint8ClampedArray(v.flatMap(x => [x, x, x, 255]));
+  const id = L.applyLevels(p({ levelsMin: 0, levelsMax: 255, levelsGamma: 0 }), px(0, 100, 255));
+  assert.deepEqual([...id].filter((_, i) => i % 4 === 0), [0, 100, 255]);
+  const clamped = L.applyLevels(p({ levelsMin: 100, levelsMax: 200, levelsGamma: 0 }), px(50, 150, 250));
+  assert.deepEqual([...clamped].filter((_, i) => i % 4 === 0), [0, 128, 255]);
+  const bright = L.applyLevels(p({ levelsMin: 0, levelsMax: 255, levelsGamma: 1 }), px(128))[0];
+  const dark = L.applyLevels(p({ levelsMin: 0, levelsMax: 255, levelsGamma: -1 }), px(128))[0];
+  assert.ok(bright > 128 && dark < 128);
+  // levelsMax below levelsMin is raised to levelsMin + 1 (as in the original)
+  const swap = L.applyLevels(p({ levelsMin: 200, levelsMax: 50, levelsGamma: 0 }), px(200, 201));
+  assert.deepEqual([...swap].filter((_, i) => i % 4 === 0), [0, 255]);
+});
