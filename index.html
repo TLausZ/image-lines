@@ -105,7 +105,7 @@
     padding: 6px 8px;
     width: 100%;
   }
-  #wrapper { position: relative; display: flex; }
+  #wrapper { position: relative; display: flex; overflow: visible; }
   #wrapper.circle #view { cursor: crosshair; }
   #marker {
     position: absolute;
@@ -162,6 +162,8 @@
     margin-bottom: 2px;
   }
   .ctrl .val { color: var(--ink); }
+  .ctrl input.edit { width: 64px; padding: 0 4px; text-align: right; font: inherit; color: var(--ink);
+    background: transparent; border: 1px solid var(--border); border-radius: 4px; }
   .ctrl input[type=range] { width: 100%; accent-color: var(--ink); height: 16px; }
   select {
     font-family: inherit;
@@ -354,8 +356,8 @@ const SLIDERS = {
   ctrlCircle: [
     { key: 'min_radius', help: 'radius of the innermost circle', label: 'min radius', min: 0, max: 3000, step: 1 },
     { key: 'max_radius', help: 'radius of the outermost circle', label: 'max radius', min: 0, max: 3000, step: 1 },
-    { key: 'center_x', help: 'centre offset from the image centre in px', label: 'center x', min: -2000, max: 2000, step: 1 },
-    { key: 'center_y', help: 'centre offset from the image centre in px', label: 'center y', min: -2000, max: 2000, step: 1 },
+    { key: 'center_x', edit: true, help: 'centre offset from the image centre in px, type a value to go beyond the slider or outside the image', label: 'center x', min: -2000, max: 2000, step: 1 },
+    { key: 'center_y', edit: true, help: 'centre offset from the image centre in px, type a value to go beyond the slider or outside the image', label: 'center y', min: -2000, max: 2000, step: 1 },
     { key: 'ellipse', help: 'ellipse ratio, 0: circle, positive: wide, negative: tall', label: 'ellipse', min: -3, max: 3, step: 0.01 },
   ],
   ctrlSinus: [
@@ -393,14 +395,17 @@ for (const [box, list] of Object.entries(SLIDERS)) {
   for (const s of list) {
     const div = document.createElement('div');
     div.className = 'ctrl';
-    div.innerHTML = `<label><span>${s.label}<span class="help">?</span></span><span class="val"></span></label>
+    // s.edit: the value is a number field, accepts values outside the slider range
+    const valEl = s.edit ? `<input type="number" class="val edit" step="${s.step}">` : `<span class="val"></span>`;
+    div.innerHTML = `<label><span>${s.label}<span class="help">?</span></span>${valEl}</label>
       <input type="range" min="${s.min}" max="${s.max}" step="${s.step}" value="${P[s.key]}">`;
     $(box).appendChild(div);
     attachHelp(div.querySelector('.help'), s.label, s.help);
-    const input = div.querySelector('input'), val = div.querySelector('.val');
-    const show = () => { val.textContent = String(+input.value); };
+    const input = div.querySelector('input[type=range]'), val = div.querySelector('.val');
+    const show = () => { if (s.edit) val.value = P[s.key]; else val.textContent = String(+input.value); };
     show();
     input.addEventListener('input', () => { P[s.key] = +input.value; show(); schedule(); });
+    if (s.edit) val.addEventListener('change', () => { P[s.key] = +val.value || 0; input.value = P[s.key]; schedule(); });
     inputs[s.key] = { input, show };
   }
 }
