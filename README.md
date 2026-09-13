@@ -8,7 +8,18 @@ drawing where the image is encoded in the presence or absence of line
 segments.
 
 The port runs entirely in the browser, without server, build step or
-dependencies: open `index.html` locally.
+dependencies: open `index.html` locally. The algorithm lives in `lines.js`,
+the page only handles UI and canvas.
+
+## Tests
+
+```
+node --test
+```
+
+`test.js` covers the threshold distribution sequences, the threshold curve,
+straight line geometry, the segment filter and the SVG output. No packages
+needed.
 
 ## Status
 
