@@ -23,7 +23,7 @@ and only the segments above or below a set of thresholds are kept. The result
 is a plotter-ready vector drawing where the image is encoded in the presence
 or absence of line segments.
 
-**[tlausz.github.io/image-lines](https://tlausz.github.io/image-lines/)**
+Try it in the browser: **[tlausz.github.io/image-lines](https://tlausz.github.io/image-lines/)**
 
 ![Image Lines web app](example/screenshot.png)
 
