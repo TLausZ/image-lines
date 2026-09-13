@@ -218,6 +218,11 @@
       <button id="btnExample">example</button>
     </div>
     <input type="file" id="fileInput" accept="image/*" hidden>
+    <div class="btnrow">
+      <button id="btnLoadSettings">load settings</button>
+      <button id="btnSaveSettings">save settings</button>
+    </div>
+    <input type="file" id="settingsInput" accept=".json,application/json" hidden>
 
     <div class="hint">image</div>
     <div id="ctrlImage"></div>
@@ -487,21 +492,27 @@ function rebuild() {
   buildTransformedImage();
   const lines = L.buildLines(P);
   drawn = L.applyThreshold(P, lines, img);
-  view.width = img.w; view.height = img.h;
+  fitView();
+  $('status').textContent = `${lines.length} lines, ${drawn.length} segments, ${Math.round(performance.now() - t0)} ms`;
+}
+
+// draw at device resolution: backing store = css size * devicePixelRatio
+function draw() {
+  const k = parseFloat(view.style.width) / img.w * (devicePixelRatio || 1);
+  view.width = Math.round(img.w * k); view.height = Math.round(img.h * k);
   const ctx = view.getContext('2d');
-  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--paper');
-  ctx.fillRect(0, 0, img.w, img.h);
-  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--line');
+  const css = getComputedStyle(document.body);
+  ctx.fillStyle = css.getPropertyValue('--paper');
+  ctx.fillRect(0, 0, view.width, view.height);
+  ctx.strokeStyle = css.getPropertyValue('--line');
   ctx.lineWidth = P.lineWidth;
-  ctx.translate(img.w / 2, img.h / 2);
+  ctx.setTransform(k, 0, 0, k, img.w / 2 * k, img.h / 2 * k);
   ctx.beginPath();
   for (const pts of drawn) {
     ctx.moveTo(pts[0], pts[1]);
     for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
   }
   ctx.stroke();
-  fitView();
-  $('status').textContent = `${lines.length} lines, ${drawn.length} segments, ${Math.round(performance.now() - t0)} ms`;
 }
 
 // ---------------------------------------------------------------
@@ -572,6 +583,7 @@ function fitView() {
   const k = Math.min((st.width - 32) / img.w, (st.height - 32) / img.h);
   view.style.width = img.w * k + 'px';
   view.style.height = img.h * k + 'px';
+  draw();
   placeMarker();
 }
 function placeMarker() {
@@ -616,6 +628,38 @@ function loadFile(file) {
   if (file && file.type.startsWith('image/')) loadSrc(URL.createObjectURL(file), file.name);
 }
 $('btnExample').addEventListener('click', () => loadSrc(DEMO, 'warhol.jpg'));
+// ---------------------------------------------------------------
+// Settings: flat json of P; also reads the original's Settings/*.json layout
+// ---------------------------------------------------------------
+function applySettings(o) {
+  if (o.Lines || o.Threshold || o.Image) o = fromOriginal(o);
+  for (const k in P) if (k in o && typeof o[k] === typeof P[k]) P[k] = o[k];
+  for (const k in inputs) { inputs[k].input.value = P[k]; inputs[k].show(); }
+  $('btnBlack').classList.toggle('active', P.black);
+  $('distSel').value = P.distribution_mode;
+  $('typeSel').value = P.type;
+  $('typeSel').dispatchEvent(new Event('change'));
+}
+function fromOriginal(o) {
+  const I = o.Image || {}, Ln = o.Lines || {}, T = o.Threshold || {}, S = o.Style || {};
+  const st = Ln.StraightLines || {}, ci = Ln.CircleLines || {}, si = Ln.SinusLines || {};
+  const r = { ...I, ...Ln, ...T, ...ci, high: si.high, period: si.period, lineWidth: S.lineWidth };
+  if (Ln.type === 2) { r.direction = si.direction_sinus; r.size = si.size; }
+  else { r.direction = st.direction; r.size = st.size; }
+  return r;
+}
+$('btnSaveSettings').addEventListener('click', () => {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(P, null, 2)], { type: 'application/json' }));
+  download(url, imgName + '-lines.json');
+  URL.revokeObjectURL(url);
+});
+$('btnLoadSettings').addEventListener('click', () => $('settingsInput').click());
+$('settingsInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(t => applySettings(JSON.parse(t.replace(/^\uFEFF/, '')))).catch(() => { $('status').textContent = 'settings file not readable'; });
+  e.target.value = '';
+});
+
 $('btnLoad').addEventListener('click', () => $('fileInput').click());
 $('fileInput').addEventListener('change', e => loadFile(e.target.files[0]));
 document.addEventListener('dragover', e => e.preventDefault());

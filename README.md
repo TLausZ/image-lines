@@ -11,6 +11,12 @@ The port runs entirely in the browser, without server, build step or
 dependencies: open `index.html` locally. The algorithm lives in `lines.js`,
 the page only handles UI and canvas.
 
+## Settings
+
+"save settings" downloads all parameters as JSON, "load settings" reads such
+a file back. Files from the original's `Settings/` folder load as well; the
+image itself is not part of a settings file.
+
 ## Tests
 
 ```
@@ -33,7 +39,7 @@ Work in progress, ported step by step from the original sketch.
 - [x] Sinus lines (amplitude, period; direction and size shared with straight lines)
 - [x] Image levels (min, max, gamma)
 - [x] Export panel: SVG (pixels or paper size with 10 mm margin), PNG/WebP raster
-- [ ] Settings presets
+- [x] Settings: save and load as JSON, also reads the original's `Settings/*.json` files
 
 ## Usage
 
