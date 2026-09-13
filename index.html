@@ -19,6 +19,7 @@
     --line: rgba(74,58,40,0.68);
     --border: rgba(110,92,64,0.25);
     --border-strong: rgba(110,92,64,0.4);
+    --accent: rgba(150,90,50,0.95);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; }
@@ -104,9 +105,21 @@
     padding: 6px 8px;
     width: 100%;
   }
+  #wrapper { position: relative; display: flex; }
+  #wrapper.circle #view { cursor: crosshair; }
+  #marker {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 1px solid var(--paper-bright);
+    transform: translate(-50%, -50%);
+    cursor: grab;
+  }
+  #marker[hidden] { display: none; }
   #view {
-    max-width: 100%;
-    max-height: 100%;
+    display: block;
     border: 1px solid var(--border);
     background: var(--paper);
   }
@@ -196,7 +209,7 @@
   <div class="sub" id="imginfo">drop an image anywhere</div>
 </header>
 <main>
-  <div id="stage"><canvas id="view"></canvas></div>
+  <div id="stage"><div id="wrapper"><canvas id="view"></canvas><div id="marker" hidden></div></div></div>
   <div id="panel">
     <div class="btnrow">
       <button id="btnLoad">load image</button>
@@ -229,6 +242,7 @@
     </div>
     <div id="modeCircle" hidden>
       <div id="ctrlCircle"></div>
+      <div class="hint">click on the image sets the centre, drag the marker moves it</div>
       <div class="btnrow">
         <button id="btnCenter">center</button>
         <button id="btnCircle">circle</button>
@@ -399,6 +413,8 @@ $('typeSel').addEventListener('change', () => {
   $('modeStraight').hidden = P.type !== 0;
   $('modeCircle').hidden = P.type !== 1;
   $('modeSinus').hidden = P.type !== 2;
+  $('wrapper').classList.toggle('circle', P.type === 1);
+  placeMarker();
   // direction and size are shared by straight and sinus: move their controls into the visible group
   (P.type === 2 ? $('ctrlSinusDir') : $('modeStraight')).prepend($('dirButtons'), $('ctrlStraight'));
   schedule();
@@ -465,8 +481,103 @@ function rebuild() {
     for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
   }
   ctx.stroke();
+  fitView();
   $('status').textContent = `${lines.length} lines, ${drawn.length} segments, ${Math.round(performance.now() - t0)} ms`;
 }
+
+// ---------------------------------------------------------------
+// Export (same conventions as contour drawing: 10 mm margin, 0.3 mm per line width unit)
+// ---------------------------------------------------------------
+const svgNow = () => L.buildSvg(P, drawn, img, $('paperSel').value ? $('paperSel').value.split(',').map(Number) : null);
+function exportName(ext) {
+  const opt = $('paperSel').selectedOptions[0];
+  const suffix = opt.value ? '-' + opt.dataset.slug + (img.w > img.h ? '-landscape' : '-portrait') : '';
+  return imgName + '-lines' + suffix + '.' + ext;
+}
+function download(href, name) {
+  const a = document.createElement('a');
+  a.href = href; a.download = name; a.click();
+}
+$('btnDlSvg').addEventListener('click', () => {
+  if (!img) return;
+  const url = URL.createObjectURL(new Blob([svgNow()], { type: 'image/svg+xml' }));
+  download(url, exportName('svg'));
+  URL.revokeObjectURL(url);
+});
+$('pngSizes').onclick = e => { if (e.target.tagName === 'BUTTON') $('pngSize').value = e.target.textContent; };
+$('btnDlPng').addEventListener('click', () => {
+  if (!img) return;
+  const size = Math.min(6000, Math.max(200, +$('pngSize').value || 2048));
+  const im = new Image();
+  const url = URL.createObjectURL(new Blob([svgNow()], { type: 'image/svg+xml' }));
+  im.onload = () => {
+    URL.revokeObjectURL(url);
+    const cv = document.createElement('canvas');
+    const k = size / Math.max(im.naturalWidth, im.naturalHeight);
+    cv.width = Math.round(im.naturalWidth * k); cv.height = Math.round(im.naturalHeight * k);
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(im, 0, 0, cv.width, cv.height);
+    // quality 1 = lossless webp in chromium; browsers without webp encoder fall back to png
+    const href = cv.toDataURL($('pngFmt').value, 1);
+    download(href, exportName(href.startsWith('data:image/webp') ? 'webp' : 'png'));
+  };
+  im.src = url;
+});
+const toggleExport = open => {
+  $('exportPanel').classList.toggle('hidden', !open);
+  $('etoggle').classList.toggle('hidden', !open);
+  $('etoggle').innerHTML = open ? '&lsaquo;' : '&rsaquo;';
+  $('btnExport').classList.toggle('active', open);
+  $('stage').classList.toggle('mleft', open);
+  setTimeout(fitView, 220);
+};
+const isExportOpen = () => !$('exportPanel').classList.contains('hidden');
+$('btnExport').addEventListener('click', () => toggleExport(!isExportOpen()));
+$('etoggle').addEventListener('click', () => toggleExport(!isExportOpen()));
+$('ptoggle').addEventListener('click', () => {
+  const hidden = $('panel').classList.toggle('hidden');
+  $('ptoggle').classList.toggle('hidden', hidden);
+  $('ptoggle').innerHTML = hidden ? '&lsaquo;' : '&rsaquo;';
+  $('stage').classList.toggle('wide', hidden);
+  setTimeout(fitView, 220);
+});
+
+// ---------------------------------------------------------------
+// Circle centre: click sets, drag moves (image coordinates, centred)
+// ---------------------------------------------------------------
+// fit the canvas into the stage, keeping the aspect ratio
+function fitView() {
+  if (!img) return;
+  const st = $('stage').getBoundingClientRect();
+  const k = Math.min((st.width - 32) / img.w, (st.height - 32) / img.h);
+  view.style.width = img.w * k + 'px';
+  view.style.height = img.h * k + 'px';
+  placeMarker();
+}
+function placeMarker() {
+  const m = $('marker');
+  m.hidden = P.type !== 1 || !img;
+  if (m.hidden) return;
+  const r = view.getBoundingClientRect();
+  m.style.left = (P.center_x + img.w / 2) * r.width / img.w + 'px';
+  m.style.top = (P.center_y + img.h / 2) * r.height / img.h + 'px';
+}
+function setCentre(e) {
+  const r = view.getBoundingClientRect();
+  setParam('center_x', Math.round((e.clientX - r.left) * img.w / r.width - img.w / 2));
+  setParam('center_y', Math.round((e.clientY - r.top) * img.h / r.height - img.h / 2));
+  placeMarker();
+}
+view.addEventListener('click', e => { if (P.type === 1 && img) setCentre(e); });
+$('marker').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  $('marker').setPointerCapture(e.pointerId);
+  const move = ev => setCentre(ev);
+  $('marker').addEventListener('pointermove', move);
+  $('marker').addEventListener('pointerup', () => $('marker').removeEventListener('pointermove', move), { once: true });
+});
+addEventListener('resize', fitView);
 
 // ---------------------------------------------------------------
 // Load
