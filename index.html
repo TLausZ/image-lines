@@ -44,6 +44,7 @@
   }
   header h1 { font-size: 15px; font-weight: 600; color: var(--ink); }
   header .sub { font-size: 12px; color: var(--ink-faint); }
+  header .sub a { color: inherit; }
   main { flex: 1; display: flex; min-height: 0; }
   #stage {
     flex: 1;
@@ -207,7 +208,7 @@
 </head>
 <body>
 <header>
-  <h1>image lines</h1>
+  <div><h1>image lines</h1><div class="sub">browser port of <a href="https://github.com/cfloutier/image_lines">github.com/cfloutier/image_lines</a></div></div>
   <div class="sub" id="imginfo">drop an image anywhere</div>
 </header>
 <main>
