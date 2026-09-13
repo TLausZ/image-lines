@@ -26,7 +26,8 @@ or absence of line segments.
 ![Image Lines web app](example/screenshot.png)
 
 The port runs entirely in the browser, without server, build step or
-dependencies: open `index.html` locally. The algorithm lives in `lines.js`,
+dependencies: **[tlausz.github.io/image-lines](https://tlausz.github.io/image-lines/)**,
+or open `index.html` locally. The algorithm lives in `lines.js`,
 the page only handles UI and canvas.
 
 ## Usage
