@@ -338,7 +338,7 @@ const $ = id => document.getElementById(id);
 // Parameters. Names and ranges follow the Processing sketch.
 // ---------------------------------------------------------------
 const P = {
-  Width: 500, Blur: 2, levelsMin: 0, levelsMax: 255, levelsGamma: 0,   // DataImage
+  Width: 500, Blur: 2, levelsMin: 0, levelsMax: 255, levelsGamma: 0, imageAlpha: 0,   // DataImage
   // start values from Settings/default.json of the original
   type: 0, lines_spacing: 1.13, precision: 3.6, direction: -44.4, size: 1144,   // DataLines, StraightLinesData, shared with sinus
   min_radius: 0, max_radius: 1000, center_x: 0, center_y: 0, ellipse: 0,          // CircleLinesData
@@ -354,6 +354,7 @@ const SLIDERS = {
     { key: 'levelsMin', help: 'input black point, pixels at or below become black', label: 'levels min', min: 0, max: 254, step: 1 },
     { key: 'levelsMax', help: 'input white point, pixels at or above become white', label: 'levels max', min: 1, max: 255, step: 1 },
     { key: 'levelsGamma', help: 'gamma, 0 neutral, above 0 brightens midtones, below 0 darkens them', label: 'levels gamma', min: -1, max: 1, step: 0.01 },
+    { key: 'imageAlpha', redraw: true, help: 'shows the processed image under the lines, preview only, not exported', label: 'image alpha', min: 0, max: 255, step: 1 },
   ],
   ctrlLines: [
     { key: 'lines_spacing', help: 'distance between adjacent lines in px', label: 'lines spacing', min: 0.5, max: 10, step: 0.01 },
@@ -414,7 +415,8 @@ for (const [box, list] of Object.entries(SLIDERS)) {
     const input = div.querySelector('input[type=range]'), val = div.querySelector('.val');
     const show = () => { if (s.edit) val.value = P[s.key]; else val.textContent = String(+input.value); };
     show();
-    input.addEventListener('input', () => { P[s.key] = +input.value; show(); schedule(); });
+    // s.redraw: display only, no recompute
+    input.addEventListener('input', () => { P[s.key] = +input.value; show(); if (s.redraw) draw(); else schedule(); });
     if (s.edit) val.addEventListener('change', () => { P[s.key] = +val.value || 0; input.value = P[s.key]; schedule(); });
     inputs[s.key] = { input, show };
   }
@@ -476,7 +478,10 @@ function buildTransformedImage() {
   // ponytail: canvas blur instead of Processing's BLUR kernel, radius roughly matches
   if (P.Blur > 0) ctx.filter = `blur(${P.Blur}px)`;
   ctx.drawImage(source, 0, 0, w, h);
-  img = { w, h, data: L.applyLevels(P, ctx.getImageData(0, 0, w, h).data) };
+  const id = ctx.getImageData(0, 0, w, h);
+  L.applyLevels(P, id.data);
+  ctx.putImageData(id, 0, 0);            // keep the processed image for the alpha overlay
+  img = { w, h, data: id.data, canvas: c };
 }
 
 // ---------------------------------------------------------------
@@ -507,6 +512,11 @@ function draw() {
   ctx.strokeStyle = css.getPropertyValue('--line');
   ctx.lineWidth = P.lineWidth;
   ctx.setTransform(k, 0, 0, k, img.w / 2 * k, img.h / 2 * k);
+  if (P.imageAlpha > 0) {
+    ctx.globalAlpha = P.imageAlpha / 255;
+    ctx.drawImage(img.canvas, -img.w / 2, -img.h / 2);
+    ctx.globalAlpha = 1;
+  }
   ctx.beginPath();
   for (const pts of drawn) {
     ctx.moveTo(pts[0], pts[1]);
