@@ -412,12 +412,11 @@ $('distSel').addEventListener('change', () => { P.distribution_mode = +$('distSe
 
 const DEFAULTS = { ...P };
 $('btnReset').addEventListener('click', () => {
-  Object.assign(P, DEFAULTS);
+  Object.assign(P, DEFAULTS, { type: P.type });   // keep the curve type
   for (const k in inputs) { inputs[k].input.value = P[k]; inputs[k].show(); }
   $('btnBlack').classList.toggle('active', P.black);
   $('distSel').value = P.distribution_mode;
-  $('typeSel').value = P.type;
-  $('typeSel').dispatchEvent(new Event('change'));
+  schedule();
 });
 
 // ---------------------------------------------------------------
