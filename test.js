@@ -131,3 +131,21 @@ test('levels: clamp range and gamma', () => {
   const swap = L.applyLevels(p({ levelsMin: 200, levelsMax: 50, levelsGamma: 0 }), px(200, 201));
   assert.deepEqual([...swap].filter((_, i) => i % 4 === 0), [0, 255]);
 });
+
+test('export metadata: svg desc, png tEXt chunks', () => {
+  const svg = L.buildSvg(p({}), [[0, 0, 1, 1]], { w: 10, h: 10 }, null);
+  assert.match(svg, /<desc>created with image lines, https:\/\/github.com\/TLausZ\/image-lines<\/desc>/);
+  assert.match(svg, /<metadata>\{.*"nb_values":1.*\}<\/metadata>/);
+  assert.ok(!svg.includes('imageAlpha'));
+  assert.equal(L.crc32(new TextEncoder().encode('IEND')), 0xAE426082);   // well known png constant
+  // minimal png skeleton: signature + IHDR(13 bytes) + IEND
+  const sig = [137, 80, 78, 71, 13, 10, 26, 10];
+  const ihdr = [0, 0, 0, 13, 73, 72, 68, 82, ...new Array(13).fill(0), 1, 2, 3, 4];
+  const iend = [0, 0, 0, 0, 73, 69, 78, 68, 0xAE, 0x42, 0x60, 0x82];
+  const out = L.pngWithText(new Uint8Array([...sig, ...ihdr, ...iend]), { Software: 'x' });
+  const chunkLen = 12 + 'Software'.length + 1 + 1;
+  assert.equal(out.length, sig.length + ihdr.length + chunkLen + iend.length);
+  assert.equal(String.fromCharCode(...out.subarray(37, 41)), 'tEXt');
+  assert.equal(String.fromCharCode(...out.subarray(41, 49)), 'Software');
+  assert.deepEqual([...out.subarray(out.length - 12)], iend);
+});

@@ -8,6 +8,14 @@
 'use strict';
 (function (root) {
 
+const CREATED_WITH = 'image lines, https://github.com/TLausZ/image-lines';
+
+// settings worth keeping in an export: everything except display-only values
+function exportSettings(P) {
+  const { imageAlpha, ...rest } = P;
+  return rest;
+}
+
 // DataImage.getPixelValue: mean of r,g,b, -1 outside the image
 function getPixelValue(img, x, y) {
   const xp = Math.trunc(x + img.w / 2), yp = Math.trunc(y + img.h / 2);
@@ -187,8 +195,11 @@ function buildSvg(P, drawn, img, paper) {
     return `<path d="${d}"/>`;
   }).join('\n');
   const attrs = 'fill="none" stroke="#000" stroke-linejoin="round" stroke-linecap="round"';
+  const meta = `<desc>created with ${CREATED_WITH}</desc>
+<metadata>${JSON.stringify(exportSettings(P))}</metadata>`;
   if (!paper)
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+${meta}
 <g ${attrs} stroke-width="${P.lineWidth}">
 ${paths}
 </g>
@@ -199,12 +210,47 @@ ${paths}
   const sc = Math.min((pw - 2 * margin) / w, (ph - 2 * margin) / h);
   const ox = (pw - w * sc) / 2, oy = (ph - h * sc) / 2;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pw} ${ph}" width="${pw}mm" height="${ph}mm">
+${meta}
 <g transform="translate(${ox.toFixed(3)} ${oy.toFixed(3)}) scale(${sc.toFixed(6)})" ${attrs} stroke-width="${(P.lineWidth * 0.3 / sc).toFixed(4)}">
 ${paths}
 </g>
 </svg>`;
 }
 
-root.ImageLines = { getPixelValue, applyLevels, buildStraightLines, buildCircleLines, buildSinusLines, buildLines, thresholdByIndex, distributedIndex,
+// PNG text chunks: insert tEXt chunks after IHDR. png = Uint8Array of a png file.
+const crcTable = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (const b of bytes) c = crcTable[(c ^ b) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function textChunk(keyword, text) {
+  const enc = new TextEncoder();
+  const data = new Uint8Array([...enc.encode(keyword), 0, ...enc.encode(text)]);
+  const type = enc.encode('tEXt');
+  const out = new Uint8Array(12 + data.length);
+  const dv = new DataView(out.buffer);
+  dv.setUint32(0, data.length);
+  out.set(type, 4); out.set(data, 8);
+  dv.setUint32(8 + data.length, crc32(new Uint8Array([...type, ...data])));
+  return out;
+}
+function pngWithText(png, fields) {
+  const ihdrEnd = 8 + 12 + 13;                     // signature + IHDR chunk
+  const chunks = Object.entries(fields).map(([k, v]) => textChunk(k, v));
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const out = new Uint8Array(png.length + total);
+  out.set(png.subarray(0, ihdrEnd), 0);
+  let pos = ihdrEnd;
+  for (const c of chunks) { out.set(c, pos); pos += c.length; }
+  out.set(png.subarray(ihdrEnd), pos);
+  return out;
+}
+
+root.ImageLines = { CREATED_WITH, exportSettings, pngWithText, crc32, getPixelValue, applyLevels, buildStraightLines, buildCircleLines, buildSinusLines, buildLines, thresholdByIndex, distributedIndex,
   interleavedTable, bisectBfsTable, applyThreshold, buildSvg };
 })(typeof module !== 'undefined' ? module.exports : globalThis);

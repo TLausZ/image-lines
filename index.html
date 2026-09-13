@@ -558,7 +558,13 @@ $('btnDlPng').addEventListener('click', () => {
     ctx.drawImage(im, 0, 0, cv.width, cv.height);
     // quality 1 = lossless webp in chromium; browsers without webp encoder fall back to png
     const href = cv.toDataURL($('pngFmt').value, 1);
-    download(href, exportName(href.startsWith('data:image/webp') ? 'webp' : 'png'));
+    if (!href.startsWith('data:image/png')) return download(href, exportName('webp'));
+    // png: add Software and Comment text chunks (webp is left without metadata)
+    const raw = Uint8Array.from(atob(href.split(',')[1]), ch => ch.charCodeAt(0));
+    const png = L.pngWithText(raw, { Software: 'created with ' + L.CREATED_WITH, Comment: JSON.stringify(L.exportSettings(P)) });
+    const url2 = URL.createObjectURL(new Blob([png], { type: 'image/png' }));
+    download(url2, exportName('png'));
+    URL.revokeObjectURL(url2);
   };
   im.src = url;
 });
@@ -657,7 +663,8 @@ function fromOriginal(o) {
   return r;
 }
 $('btnSaveSettings').addEventListener('click', () => {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(P, null, 2)], { type: 'application/json' }));
+  const json = JSON.stringify({ created_with: L.CREATED_WITH, ...P }, null, 2);
+  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
   download(url, imgName + '-lines.json');
   URL.revokeObjectURL(url);
 });

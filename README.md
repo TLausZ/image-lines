@@ -69,6 +69,11 @@ documents them in detail.
 a file back. Files from the original's `Settings/` folder load as well; the
 image itself is not part of a settings file.
 
+Exports carry their origin: the SVG has a `<desc>` with the project link and
+the parameters as JSON in `<metadata>`, the PNG gets `Software` and `Comment`
+text chunks with the same content, the settings JSON a `created_with` field.
+WebP files are written without metadata.
+
 ## Tests
 
 ```
