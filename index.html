@@ -226,7 +226,6 @@
 
     <div class="hint">image</div>
     <div id="ctrlImage"></div>
-    <button id="btnResetLevels">reset levels</button>
 
     <hr>
     <div class="hint">lines</div>
@@ -438,7 +437,6 @@ $('typeSel').addEventListener('change', () => {
 });
 $('btnCenter').addEventListener('click', () => { setParam('center_x', 0); setParam('center_y', 0); });
 $('btnCircle').addEventListener('click', () => setParam('ellipse', 0));
-$('btnResetLevels').addEventListener('click', () => { setParam('levelsMin', 0); setParam('levelsMax', 255); setParam('levelsGamma', 0); });
 // fit: ring from the nearest image edge to the farthest corner, so the circles cover the image
 $('btnFit').addEventListener('click', () => {
   if (!img) return;
