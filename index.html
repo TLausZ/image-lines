@@ -248,6 +248,7 @@
       <div class="btnrow">
         <button id="btnCenter">center</button>
         <button id="btnCircle">circle</button>
+        <button id="btnFit">fit</button>
       </div>
     </div>
     <div id="modeSinus" hidden>
@@ -354,8 +355,8 @@ const SLIDERS = {
     { key: 'size', help: 'half-length of the lines around the centre, must cover the image corners', label: 'size', min: 10, max: 2000, step: 1 },
   ],
   ctrlCircle: [
-    { key: 'min_radius', help: 'radius of the innermost circle', label: 'min radius', min: 0, max: 3000, step: 1 },
-    { key: 'max_radius', help: 'radius of the outermost circle', label: 'max radius', min: 0, max: 3000, step: 1 },
+    { key: 'min_radius', edit: true, help: 'radius of the innermost circle, type a value to go beyond the slider', label: 'min radius', min: 0, max: 3000, step: 1 },
+    { key: 'max_radius', edit: true, help: 'radius of the outermost circle, type a value to go beyond the slider, fit covers the image', label: 'max radius', min: 0, max: 3000, step: 1 },
     { key: 'center_x', edit: true, help: 'centre offset from the image centre in px, type a value to go beyond the slider or outside the image', label: 'center x', min: -2000, max: 2000, step: 1 },
     { key: 'center_y', edit: true, help: 'centre offset from the image centre in px, type a value to go beyond the slider or outside the image', label: 'center y', min: -2000, max: 2000, step: 1 },
     { key: 'ellipse', help: 'ellipse ratio, 0: circle, positive: wide, negative: tall', label: 'ellipse', min: -3, max: 3, step: 0.01 },
@@ -426,6 +427,14 @@ $('typeSel').addEventListener('change', () => {
 });
 $('btnCenter').addEventListener('click', () => { setParam('center_x', 0); setParam('center_y', 0); });
 $('btnCircle').addEventListener('click', () => setParam('ellipse', 0));
+// fit: ring from the nearest image edge to the farthest corner, so the circles cover the image
+$('btnFit').addEventListener('click', () => {
+  if (!img) return;
+  const hw = img.w / 2, hh = img.h / 2, cx = P.center_x, cy = P.center_y;
+  const dx = Math.max(0, Math.abs(cx) - hw), dy = Math.max(0, Math.abs(cy) - hh);
+  setParam('min_radius', Math.floor(Math.hypot(dx, dy)));
+  setParam('max_radius', Math.ceil(Math.hypot(Math.abs(cx) + hw, Math.abs(cy) + hh)));
+});
 $('btnBlack').addEventListener('click', () => {
   P.black = !P.black; $('btnBlack').classList.toggle('active', P.black); schedule();
 });
