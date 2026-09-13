@@ -259,6 +259,7 @@
     <div id="ctrlThreshold"></div>
 
     <hr>
+    <button id="btnReset">reset values</button>
     <button id="btnExport">export</button>
     <div id="status"></div>
   </div>
@@ -408,6 +409,16 @@ $('btnBlack').addEventListener('click', () => {
   P.black = !P.black; $('btnBlack').classList.toggle('active', P.black); schedule();
 });
 $('distSel').addEventListener('change', () => { P.distribution_mode = +$('distSel').value; schedule(); });
+
+const DEFAULTS = { ...P };
+$('btnReset').addEventListener('click', () => {
+  Object.assign(P, DEFAULTS);
+  for (const k in inputs) { inputs[k].input.value = P[k]; inputs[k].show(); }
+  $('btnBlack').classList.toggle('active', P.black);
+  $('distSel').value = P.distribution_mode;
+  $('typeSel').value = P.type;
+  $('typeSel').dispatchEvent(new Event('change'));
+});
 
 // ---------------------------------------------------------------
 // Image: resize to Width, blur, keep pixel data (xLib_Image.pde)
