@@ -82,6 +82,8 @@ test('buildSvg: pixel and paper variants', () => {
   // scale = (297-20)/100 = 2.77, offsets centre the drawing
   assert.match(a4, /translate\(10.000 35.750\) scale\(2.770000\)/);
   assert.match(a4, /stroke-width="0.1083"/);            // 0.3 mm / 2.77
+  const m0 = L.buildSvg(p({}), drawn, img, [210, 297], 0);
+  assert.match(m0, /translate\(0.000 30.750\) scale\(2.970000\)/, 'margin 0 fills the width');
 });
 
 test('circle lines: count, closure, radius, ellipse stretch', () => {

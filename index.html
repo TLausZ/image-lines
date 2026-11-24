@@ -290,7 +290,7 @@
     <div class="hint">export</div>
     <div id="ctrlExport"></div>
     <div class="ctrl">
-      <label><span>paper<span class="help" data-title="paper" data-help="svg in mm with 10 mm margin, orientation follows the image, none: pixel size">?</span></span></label>
+      <label><span>paper<span class="help" data-title="paper" data-help="svg in mm with the margin below, orientation follows the image, none: pixel size">?</span></span></label>
       <select id="paperSel">
         <option value="" selected>none (pixels)</option>
         <option value="841,1189" data-slug="A0">A0</option>
@@ -306,7 +306,31 @@
         <option value="215.9,355.6" data-slug="Legal">Legal (8.5 x 14 in)</option>
         <option value="215.9,279.4" data-slug="Letter">Letter (8.5 x 11 in)</option>
         <option value="139.7,215.9" data-slug="Half-Letter">Half Letter (5.5 x 8.5 in)</option>
+        <optgroup label="envelopes EU">
+          <option value="229,324" data-slug="Env-C4">C4 (229 x 324 mm)</option>
+          <option value="162,229" data-slug="Env-C5">C5 (162 x 229 mm)</option>
+          <option value="114,229" data-slug="Env-C6-5">C6/5 (114 x 229 mm)</option>
+          <option value="114,162" data-slug="Env-C6">C6 (114 x 162 mm)</option>
+          <option value="110,220" data-slug="Env-DL">DL (110 x 220 mm)</option>
+          <option value="176,250" data-slug="Env-B5">B5 (176 x 250 mm)</option>
+          <option value="125,176" data-slug="Env-B6">B6 (125 x 176 mm)</option>
+        </optgroup>
+        <optgroup label="envelopes US">
+          <option value="254,330.2" data-slug="Env-10x13">10 x 13 in</option>
+          <option value="228.6,304.8" data-slug="Env-9x12">9 x 12 in</option>
+          <option value="152.4,228.6" data-slug="Env-6x9">6 x 9 in</option>
+          <option value="104.775,241.3" data-slug="Env-No10">#10 (4.125 x 9.5 in)</option>
+          <option value="98.425,225.425" data-slug="Env-No9">#9 (3.875 x 8.875 in)</option>
+          <option value="146.05,222.25" data-slug="Env-A9">A9 (5.75 x 8.75 in)</option>
+          <option value="133.35,184.15" data-slug="Env-A7">A7 (5.25 x 7.25 in)</option>
+          <option value="120.65,165.1" data-slug="Env-A6">A6 (4.75 x 6.5 in)</option>
+          <option value="111.125,146.05" data-slug="Env-A2">A2 (4.375 x 5.75 in)</option>
+        </optgroup>
       </select>
+    </div>
+    <div class="ctrl">
+      <label>margin <span class="hint">mm, paper only</span></label>
+      <input type="number" id="paperMargin" value="10" min="0" max="100" step="1">
     </div>
     <button id="btnDlSvg">download svg</button>
     <hr>
@@ -525,9 +549,9 @@ function draw() {
 }
 
 // ---------------------------------------------------------------
-// Export (same conventions as contour drawing: 10 mm margin, 0.3 mm per line width unit)
+// Export (0.3 mm per line width unit, margin from #paperMargin)
 // ---------------------------------------------------------------
-const svgNow = () => L.buildSvg(P, drawn, img, $('paperSel').value ? $('paperSel').value.split(',').map(Number) : null);
+const svgNow = () => L.buildSvg(P, drawn, img, $('paperSel').value ? $('paperSel').value.split(',').map(Number) : null, Math.max(0, +$('paperMargin').value || 0));
 function exportName(ext) {
   const opt = $('paperSel').selectedOptions[0];
   const suffix = opt.value ? '-' + opt.dataset.slug + (img.w > img.h ? '-landscape' : '-portrait') : '';

@@ -185,8 +185,8 @@ function applyThreshold(P, lines, img) {
   return out;
 }
 
-// SVG. paper = null for pixel size, or [width_mm, height_mm]; 10 mm margin, 0.3 mm per line width unit
-function buildSvg(P, drawn, img, paper) {
+// SVG. paper = null for pixel size, or [width_mm, height_mm]; margin in mm (default 10), 0.3 mm per line width unit
+function buildSvg(P, drawn, img, paper, margin = 10) {
   const w = img.w, h = img.h, cx = w / 2, cy = h / 2;
   const paths = drawn.map(pts => {
     let d = '';
@@ -206,7 +206,6 @@ ${paths}
 </svg>`;
   let [pw, ph] = paper;
   if ((w > h) !== (pw > ph)) [pw, ph] = [ph, pw];
-  const margin = 10;
   const sc = Math.min((pw - 2 * margin) / w, (ph - 2 * margin) / h);
   const ox = (pw - w * sc) / 2, oy = (ph - h * sc) / 2;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pw} ${ph}" width="${pw}mm" height="${ph}mm">
