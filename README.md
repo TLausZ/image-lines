@@ -37,8 +37,10 @@ Drop an image anywhere on the page or use "load image"; "example" reloads
 the embedded demo portrait ([Andy Warhol, 1975](https://commons.wikimedia.org/wiki/File:Andy_Warhol1975.jpg),
 public domain, Wikimedia Commons). In circle mode a click on the image sets
 the centre, the marker can be dragged. "export" opens the left panel with
-SVG (pixel size or paper size with 10 mm margin) and PNG/WebP raster
-download. Parameters follow the original names; the
+SVG (pixel size, or a paper size with adjustable margin, default 10 mm) and
+PNG/WebP raster download. Paper sizes cover ISO A0 to A5, US/ANSI formats and
+EU and US envelopes (C4 to C6, DL, B5, B6, #9, #10, A2 to A9, 6 x 9 to
+10 x 13 in). Parameters follow the original names; the
 [original README](https://github.com/cfloutier/image_lines#readme)
 documents them in detail.
 
